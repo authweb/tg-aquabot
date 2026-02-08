@@ -11,7 +11,7 @@ export const TABLES = Object.freeze({
 });
 
 export const VIEWS = Object.freeze({
-    CLIENTS_LINKS: "public.clients_links", // optional, если решишь оставить view
+    CLIENTS_LINKS: "public.clients_links", // optional
 });
 
 /**
@@ -23,31 +23,48 @@ export const COLUMNS = Object.freeze({
         COMPANY_ID: "company_id", // bigint, not null
         YCLIENTS_CLIENT_ID: "yclients_client_id", // bigint, nullable
         PHONE: "phone", // text, not null
-        TELEGRAM_USER_ID: "telegram_user_id", // bigint, not null
-        TELEGRAM_CHAT_ID: "telegram_chat_id", // bigint, not null
-        STATUS: "status", // text
-        CREATED_AT: "created_at", // timestamp
-        UPDATED_AT: "updated_at", // timestamp
-        LINKED_AT: "linked_at", // timestamp, nullable
+        TELEGRAM_USER_ID: "telegram_user_id", // bigint, nullable/NOT NULL (как в БД)
+        TELEGRAM_CHAT_ID: "telegram_chat_id", // bigint, nullable/NOT NULL (как в БД)
+        STATUS: "status", // text: pending | linked | disabled ...
+        CREATED_AT: "created_at", // timestamptz/timestamp
+        UPDATED_AT: "updated_at", // timestamptz/timestamp
+        LINKED_AT: "linked_at", // timestamptz/timestamp, nullable
     }),
 
     RECORDS_CACHE: Object.freeze({
-        ID: "id", // bigint
-        COMPANY_ID: "company_id", // bigint
-        RECORD_ID: "record_id", // bigint
-        PAYLOAD_HASH: "payload_hash", // text
-        CREATED_AT: "created_at", // timestamp
+        ID: "id", // bigint, PK
+        COMPANY_ID: "company_id", // bigint, not null
+        RECORD_ID: "record_id", // bigint, not null
+        PAYLOAD_HASH: "payload_hash", // text, not null
+
+        // добавили:
+        PAYLOAD: "payload", // jsonb/json, nullable
+        YCLIENTS_CLIENT_ID: "yclients_client_id", // bigint, nullable (client может быть null)
+        SERVICE_AT: "service_at", // timestamptz, nullable
+        ATTENDANCE: "attendance", // int, nullable
+        DELETED: "deleted", // boolean, nullable
+        RECORD_CREATED_AT: "record_created_at", // timestamptz, nullable
+
+        CREATED_AT: "created_at", // timestamptz/timestamp
+        UPDATED_AT: "updated_at", // timestamptz/timestamp
     }),
 
     NOTIFICATION_JOBS: Object.freeze({
-        ID: "id", // bigint
-        COMPANY_ID: "company_id", // bigint
-        TELEGRAM_CHAT_ID: "telegram_chat_id", // bigint
+        ID: "id", // bigint, PK
+        COMPANY_ID: "company_id", // bigint, not null
+
+        TELEGRAM_CHAT_ID: "telegram_chat_id", // bigint (nullable или not null — как в БД)
         TYPE: "type", // text
-        PAYLOAD: "payload", // json / text (по факту в БД)
-        STATUS: "status", // text
-        RUN_AT: "run_at", // timestamp
-        CREATED_AT: "created_at", // timestamp
-        UPDATED_AT: "updated_at", // timestamp
+        PAYLOAD: "payload", // jsonb/json, nullable
+        STATUS: "status", // text: pending | running | done | failed | canceled ...
+        RUN_AT: "run_at", // timestamptz
+
+        // добавили:
+        DEDUPE_KEY: "dedupe_key", // text, nullable
+        ATTEMPTS: "attempts", // int, not null default 0
+        LAST_ERROR: "last_error", // text, nullable
+
+        CREATED_AT: "created_at", // timestamptz/timestamp
+        UPDATED_AT: "updated_at", // timestamptz/timestamp
     }),
 });

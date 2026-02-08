@@ -1,11 +1,11 @@
 // src/webhooks/recordHandlers.js
-import { getLinkedChatByPhone } from "../db/clientsLinkRepo.js";
-import { missingPhoneRule } from "./rules/missingPhoneRule.js";
-import { notLinkedRule } from "./rules/notLinkedRule.js";
-import { notConfirmedRule } from "./rules/notConfirmedRule.js";
-import { recordCanceledRule } from "./rules/recordCanceledRule.js";
-import { noShowRule } from "./rules/noShowRule.js";
-import { handleRecordClientNotifications } from "./clientNotifications/recordClientNotify.js";
+import { getLinkedChatByPhone } from "../../db/repos/clientsLinkRepo.js";
+import { missingPhoneRule } from "../../webhooks/rules/missingPhoneRule.js";
+import { notLinkedRule } from "../../webhooks/rules/notLinkedRule.js";
+import { notConfirmedRule } from "../../webhooks/rules/notConfirmedRule.js";
+import { recordCanceledRule } from "../../webhooks/rules/recordCanceledRule.js";
+import { noShowRule } from "../../webhooks/rules/noShowRule.js";
+import { handleRecordClientNotifications } from "../../webhooks/clientNotifications/recordClientNotify.js";
 
 function buildRecordLink(body) {
     return (

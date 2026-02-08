@@ -1,6 +1,6 @@
 // src/yclients/clients.js
 import axios from "axios";
-import { env } from "../config/env.js";
+import { env } from "../../config/env.js";
 
 export const yclients = axios.create({
     baseURL: "https://api.yclients.com/api/v1",

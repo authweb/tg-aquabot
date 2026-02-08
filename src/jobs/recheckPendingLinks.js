@@ -1,6 +1,6 @@
 import { env } from "../config/env.js";
-import { getPendingLinks, markClientLinked } from "../db/clientsLinkRepo.js";
-import { findClientByPhone } from "../yclients/clients.service.js";
+import { getPendingLinks, markClientLinked } from "../db/repos/clientsLinkRepo.js";
+import { findClientByPhone } from "../integrations/yclients/clients.service.js";
 
 function toNumberOrString(v) {
     const n = Number(v);

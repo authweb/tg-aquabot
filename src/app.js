@@ -11,17 +11,17 @@ import {
   upsertClientLink,
   markClientLinked,
   getLinkByTelegramUserId,
-} from "./db/clientsLinkRepo.js";
+} from "./db/repos/clientsLinkRepo.js";
 
-import { findClientByPhone } from "./yclients/clients.service.js";
+import { findClientByPhone } from "./integrations/yclients/clients.service.js";
 import {
   confirmRecordInYclients,
   getRecordFromYclients,
   listRecordsFromYclients,
-} from "./yclients/records.service.js";
+} from "./integrations/yclients/records.service.js";
 
 import { startPendingLinksRecheck } from "./jobs/recheckPendingLinks.js";
-import { handleYclientsWebhook } from "./webhooks/yclientsWebhook.js";
+import { handleYclientsWebhook } from "./integrations/yclients/yclientsWebhook.js";
 
 // ✅ Тексты/форматтеры (ты создал botMessages.js здесь)
 import {
@@ -29,7 +29,7 @@ import {
   buildRecordCard,
   buildAdminClientNotFound,
   buildAdminContactFlowError,
-} from "./webhooks/formatters/botMessages.js";
+} from "./integrations/telegram/botMessages.js";
 
 console.log("[ENV CHECK] TELEGRAM_BOT_TOKEN:", Boolean(process.env.TELEGRAM_BOT_TOKEN));
 console.log("[ENV CHECK] env.telegramBotToken:", Boolean(env.telegramBotToken));

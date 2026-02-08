@@ -1,6 +1,7 @@
-import { pool } from "./pool.js";
-import { normalizePhone } from "../utils/phone.js";
-import { TABLES, COLUMNS } from "./schema.js";
+// src/db/clientsLinkRepo.js
+import { pool } from "../pool.js";
+import { normalizePhone } from "../../utils/phone.js";
+import { TABLES, COLUMNS } from "../schema.js";
 
 /**
  * Приводим ID к "безопасному" виду для bigint:

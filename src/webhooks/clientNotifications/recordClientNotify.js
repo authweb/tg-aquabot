@@ -5,7 +5,7 @@ import {
     formatRecordConfirmedMessage,
     formatRecordChangedMessage,
     formatRecordCanceledMessage,
-} from "../formatters/recordMessages.js";
+} from "../../integrations/telegram/recordMessages.js";
 
 function servicesTitles(data) {
     const s = Array.isArray(data?.services) ? data.services : [];
