@@ -1,4 +1,4 @@
-// src/webhooks/formatters/recordMessages.js
+// src/telegram/messages/recordMessages.js
 
 const STATIC = {
     entry: "справа от главных ворот",
@@ -101,7 +101,7 @@ export function formatRecordConfirmedMessage(data, options = {}) {
     const recordLink = options.recordLink || data?.short_link || null;
 
     return [
-        "✅ Ваша запись подтверждена",
+        "✅ Подтвержденная запись:",
         `🧼 Услуга: *${services}*`,
         `📅 Дата: *${date}*`,
         `🕒 Время: *${time}*`,

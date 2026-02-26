@@ -1,4 +1,4 @@
-// src/formatters/botMessages.js
+// src/telegram/messages/botMessages.js
 
 export const BOT_TEXT = {
     start:

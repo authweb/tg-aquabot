@@ -5,7 +5,7 @@ import {
     formatRecordConfirmedMessage,
     formatRecordChangedMessage,
     formatRecordCanceledMessage,
-} from "../../integrations/telegram/recordMessages.js";
+} from "../../integrations/telegram/messages/recordMessages.js";
 
 function servicesTitles(data) {
     const s = Array.isArray(data?.services) ? data.services : [];
@@ -35,7 +35,8 @@ function formatDateTimeForSnap(data) {
 
 function isCanceled(body) {
     const st = String(body?.status || "").toLowerCase();
-    if (["delete", "deleted", "cancel", "canceled", "cancelled", "remove", "removed"].includes(st)) return true;
+    if (["delete", "deleted", "cancel", "canceled", "cancelled", "remove", "removed"].includes(st))
+        return true;
     if (st === "update" && body?.data?.deleted === true) return true;
     return false;
 }
@@ -65,7 +66,15 @@ function snapshot(data) {
         time,
         staff: staffName(data),
         services: servicesTitles(data),
+
+        // NOTE: confirmed в Yclients часто = 1 уже на create, поэтому
+        // это НЕ "клиент подтвердил". Не используем как источник подтверждения.
         confirmed: data?.confirmed ?? null,
+
+        // ✅ добавили, чтобы отличать подтверждение (attendance 0->2) от "изменено"
+        attendance: data?.attendance ?? null,
+        visit_attendance: data?.visit_attendance ?? null,
+
         deleted: data?.deleted ?? false,
     };
 }
@@ -75,9 +84,8 @@ function hashSnap(s) {
 }
 
 // in-memory state
-const lastByRecord = new Map(); // key -> { snapHash, confirmed, deleted }
-const sentDedup = new Map();    // key -> timestamp
-// debounce для "изменения записи"
+const lastByRecord = new Map(); // key -> { snapHash, confirmed, attendance, visit_attendance, deleted }
+const sentDedup = new Map(); // key -> timestamp
 const pendingChanged = new Map(); // key -> { timer, lastSnap, lastData }
 
 function dedup(key, ttlMs = 10 * 60 * 1000) {
@@ -92,20 +100,19 @@ function dedup(key, ttlMs = 10 * 60 * 1000) {
     return false;
 }
 
-function isConfirmedTrue(value) {
-    return value === 1 || value === "1" || value === true;
-}
-
-function isConfirmedFalse(value) {
-    return value === 0 || value === "0" || value === false || value === null || value === undefined;
+function isAttendanceConfirmed(v) {
+    return Number(v) === 2;
 }
 
 /**
  * Единый клиентский контур уведомлений по record:
  * - create
- * - confirmed (0 -> 1)
- * - changed (ключевые поля)
  * - canceled
+ * - changed (ключевые поля)
+ *
+ * ВАЖНО:
+ * - Подтверждение клиентом через кнопку мы делаем через callback (TG),
+ *   поэтому webhook при attendance 0->2 НИЧЕГО не шлёт (чтобы не было дублей).
  */
 export async function handleRecordClientNotifications({
     body,
@@ -135,13 +142,18 @@ export async function handleRecordClientNotifications({
             });
         }
 
-        lastByRecord.set(key, { snapHash: curHash, confirmed: curSnap.confirmed, deleted: true });
+        lastByRecord.set(key, {
+            snapHash: curHash,
+            confirmed: curSnap.confirmed,
+            attendance: curSnap.attendance,
+            visit_attendance: curSnap.visit_attendance,
+            deleted: true,
+        });
         return;
     }
 
     // 2) CREATE
     if (isNewRecordEvent(body)) {
-        // внутри блока CREATE
         if (!dedup(`client:create:${key}`)) {
             const text = formatRecordCreateMessage(data, {
                 recordLink,
@@ -164,25 +176,48 @@ export async function handleRecordClientNotifications({
             });
         }
 
-        lastByRecord.set(key, { snapHash: curHash, confirmed: curSnap.confirmed, deleted: false });
+        lastByRecord.set(key, {
+            snapHash: curHash,
+            confirmed: curSnap.confirmed,
+            attendance: curSnap.attendance,
+            visit_attendance: curSnap.visit_attendance,
+            deleted: false,
+        });
         return;
     }
 
-    // 3) CONFIRMED (0 -> 1)
-    const prevConfirmed = prev?.confirmed;
-    const curConfirmed = curSnap.confirmed;
+    // 3) CLIENT CONFIRM (attendance 0 -> 2)
+    // ✅ чтобы не было дублей: webhook ничего не шлёт, только обновляет state
+    const prevAttendance = prev?.attendance;
+    const curAttendance = curSnap.attendance;
 
-    const confirmedBecameTrue = isConfirmedFalse(prevConfirmed) && isConfirmedTrue(curConfirmed);
+    const prevVisit = prev?.visit_attendance;
+    const curVisit = curSnap.visit_attendance;
 
-    if (confirmedBecameTrue) {
-        if (!dedup(`client:confirmed:${key}`)) {
-            const text = formatRecordConfirmedMessage(data, { recordLink });
+    const becameAttendanceConfirmed =
+        prev && !isAttendanceConfirmed(prevAttendance) && isAttendanceConfirmed(curAttendance);
 
-            await bot.api.sendMessage(chatId, text, {
-                parse_mode: "Markdown",
-                disable_web_page_preview: true,
-            });
+    const becameVisitConfirmed =
+        prev && !isAttendanceConfirmed(prevVisit) && isAttendanceConfirmed(curVisit);
+
+    if (becameAttendanceConfirmed || becameVisitConfirmed) {
+        // на всякий случай: если был запланирован "changed" — отменяем
+        const pend = pendingChanged.get(key);
+        if (pend?.timer) {
+            clearTimeout(pend.timer);
+            pendingChanged.delete(key);
         }
+
+        lastByRecord.set(key, {
+            snapHash: curHash,
+            confirmed: curSnap.confirmed,
+            attendance: curAttendance,
+            visit_attendance: curVisit,
+            deleted: false,
+        });
+
+        // ❗ сообщение "подтверждено" должен отправлять callback (кнопка)
+        return;
     }
 
     // 4) CHANGED (если реально изменились ключевые поля)
@@ -200,12 +235,9 @@ export async function handleRecordClientNotifications({
                 pendingChanged.delete(key);
                 if (!entry) return;
 
-                // финальный антидубль
                 if (dedup(`client:changed:${key}`, 5 * 60 * 1000)) return;
 
-                const text = formatRecordChangedMessage(entry.lastData, {
-                    recordLink,
-                });
+                const text = formatRecordChangedMessage(entry.lastData, { recordLink });
 
                 await bot.api.sendMessage(chatId, text, {
                     parse_mode: "Markdown",
@@ -214,7 +246,7 @@ export async function handleRecordClientNotifications({
             } catch (e) {
                 console.error("[clientNotify changed] send failed", e);
             }
-        }, 10_000); // ⏱ 10 секунд debounce
+        }, 10_000);
 
         pendingChanged.set(key, {
             timer,
@@ -225,7 +257,9 @@ export async function handleRecordClientNotifications({
 
     lastByRecord.set(key, {
         snapHash: curHash,
-        confirmed: curConfirmed,
+        confirmed: curSnap.confirmed,
+        attendance: curSnap.attendance,
+        visit_attendance: curSnap.visit_attendance,
         deleted: false,
     });
 }

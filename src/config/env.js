@@ -12,7 +12,8 @@ function required(name) {
 }
 
 export const env = {
-    nodeEnv: process.env.NODE_ENV || "production",
+    nodeEnv: process.env.NODE_ENV || "development",
+    adminSessionSecret: process.env.ADMIN_SESSION_SECRET,
 
     telegramBotToken: required("TELEGRAM_BOT_TOKEN"),
     telegramAdminChatId: required("TELEGRAM_ADMIN_CHAT_ID"),
