@@ -1,6 +1,5 @@
 // src/integrations/telegram/handlers/callbacks.handler.js
 import { BOT_TEXT } from "../messages/botMessages.js";
-import { formatRecordConfirmedMessage } from "../messages/recordMessages.js";
 
 import {
     confirmRecordInYclients,

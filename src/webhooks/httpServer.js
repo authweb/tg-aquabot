@@ -52,8 +52,8 @@ export function startHttpServer({ bot, register }) {
         register(httpApp);
     }
 
-    const port = Number(env.webhookPort || process.env.WEBHOOK_PORT || 3000);
-    const host = env.webhookHost || "127.0.0.1";
+    const port = env.webhookPort;
+    const host = env.webhookHost;
 
     httpApp.listen(port, host, () => {
         console.log(`[HTTP] Webhook server listening on ${host}:${port}`);
