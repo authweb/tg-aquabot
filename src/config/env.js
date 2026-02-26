@@ -13,7 +13,12 @@ function required(name) {
 
 export const env = {
     nodeEnv: process.env.NODE_ENV || "development",
-    adminSessionSecret: process.env.ADMIN_SESSION_SECRET,
+    adminSessionSecret: required("ADMIN_SESSION_SECRET"),
+
+    webhookDumpEnabled: String(process.env.WEBHOOK_DUMP_ENABLED || "").trim() === "1",
+    webhookDumpDir: process.env.WEBHOOK_DUMP_DIR || "/opt/tg-aquabot/webhook-dumps",
+    webhookPort: Number(process.env.WEBHOOK_PORT || 3000),
+    webhookHost: process.env.WEBHOOK_HOST || "127.0.0.1",
 
     telegramBotToken: required("TELEGRAM_BOT_TOKEN"),
     telegramAdminChatId: required("TELEGRAM_ADMIN_CHAT_ID"),
