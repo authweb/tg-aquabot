@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "node --watch src/app.js"
+    "dev": "node --watch src/app.js",
+    "create-admin": "node src/scripts/createAdmin.js"
   },
   "dependencies": {
     "axios": "^1.7.9",
