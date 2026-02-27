@@ -99,6 +99,7 @@ export function registerCallbacks(bot) {
 
             await clearMarkup();
             await ctx.answerCallbackQuery({ text: "✅ Подтверждено" }).catch(() => { });
+            await safeReply(BOT_TEXT.cbOk);
             console.log("[TG callback] done OK");
         } catch (e) {
             console.log("[TG callback] ERROR", e?.message || e);
