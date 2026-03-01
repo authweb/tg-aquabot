@@ -101,8 +101,7 @@ function dedup(key, ttlMs = 10 * 60 * 1000) {
 }
 
 function isAttendanceConfirmed(v) {
-    const n = Number(v);
-    return n === 1 || n === 2;
+    return Number(v) === 2;
 }
 
 /**
@@ -170,10 +169,6 @@ export async function handleRecordClientNotifications({
                             {
                                 text: "✅ Подтвердить запись",
                                 callback_data: `rec_confirm:${companyId}:${recordId}`,
-                            },
-                            {
-                                text: "❌ Отменить",
-                                callback_data: `rec_cancel:${companyId}:${recordId}`,
                             },
                         ],
                     ],

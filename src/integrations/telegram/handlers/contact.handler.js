@@ -7,7 +7,7 @@ import {
     markClientLinked,
 } from "../../../db/repos/clientsLinkRepo.js";
 
-import { findOrCreateClientByPhone } from "../../../domain/clients.service.js";
+import { findClientByPhone } from "../../yclients/clients.service.js";
 
 import {
     BOT_TEXT,
@@ -16,7 +16,6 @@ import {
 } from "../messages/botMessages.js";
 
 import { notifyAdmin } from "../adminNotify.js";
-import { logUserAction } from "../../../db/repos/userActionsLogRepo.js";
 
 function replyMd(ctx, text, extra = {}) {
     return ctx.reply(text, { parse_mode: "Markdown", ...extra });
@@ -34,7 +33,6 @@ export function registerContactFlow(bot) {
             }
 
             const companyId = Number(env.yclientsCompanyId);
-            await logUserAction({ telegramUserId: ctx.from.id, companyId, action: "contact_shared", payload: { phone } });
 
             // 1) Telegram -> phone (pending)
             const linkRow = await upsertClientLink({
@@ -47,7 +45,7 @@ export function registerContactFlow(bot) {
             console.log("[LINK SAVED]", linkRow);
 
             // 2) find client in Yclients
-            const found = await findOrCreateClientByPhone({ companyId, phone });
+            const found = await findClientByPhone({ companyId, phone });
 
             if (found?.id) {
                 const linked = await markClientLinked({
@@ -61,7 +59,6 @@ export function registerContactFlow(bot) {
                 await replyMd(ctx, BOT_TEXT.phoneLinkedOk(phone), {
                     reply_markup: { remove_keyboard: true },
                 });
-                await logUserAction({ telegramUserId: ctx.from.id, companyId, action: "link_client", payload: { phone, yclientsClientId: Number(found.id) } });
                 return;
             }
 
