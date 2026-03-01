@@ -6,7 +6,7 @@ const login = process.argv[2];
 const password = process.argv[3];
 
 if (!login || !password) {
-    console.log("Usage: node scripts/createAdmin.js <login> <password>");
+    console.log("Usage: node src/scripts/createAdmin.js <login> <password>");
     process.exit(1);
 }
 
