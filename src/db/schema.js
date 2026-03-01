@@ -1,70 +1,79 @@
 /**
  * DB SCHEMA
  * Единый источник истины по структуре БД
- * Основано на information_schema
  */
 
 export const TABLES = Object.freeze({
-    CLIENTS_LINK: "public.clients_link",
-    RECORDS_CACHE: "public.records_cache",
-    NOTIFICATION_JOBS: "public.notification_jobs",
+  CLIENTS_LINK: "public.clients_link",
+  RECORDS_CACHE: "public.records_cache",
+  NOTIFICATION_JOBS: "public.notification_jobs",
+  USER_ACTIONS_LOG: "public.user_actions_log",
+  PROCESSED_ACTIONS: "public.processed_actions",
 });
 
 export const VIEWS = Object.freeze({
-    CLIENTS_LINKS: "public.clients_links", // optional
+  CLIENTS_LINKS: "public.clients_links",
 });
 
-/**
- * Колонки таблиц (строго по БД)
- */
 export const COLUMNS = Object.freeze({
-    CLIENTS_LINK: Object.freeze({
-        ID: "id", // bigint, PK
-        COMPANY_ID: "company_id", // bigint, not null
-        YCLIENTS_CLIENT_ID: "yclients_client_id", // bigint, nullable
-        PHONE: "phone", // text, not null
-        TELEGRAM_USER_ID: "telegram_user_id", // bigint, nullable/NOT NULL (как в БД)
-        TELEGRAM_CHAT_ID: "telegram_chat_id", // bigint, nullable/NOT NULL (как в БД)
-        STATUS: "status", // text: pending | linked | disabled ...
-        CREATED_AT: "created_at", // timestamptz/timestamp
-        UPDATED_AT: "updated_at", // timestamptz/timestamp
-        LINKED_AT: "linked_at", // timestamptz/timestamp, nullable
-    }),
+  CLIENTS_LINK: Object.freeze({
+    ID: "id",
+    COMPANY_ID: "company_id",
+    YCLIENTS_CLIENT_ID: "yclients_client_id",
+    PHONE: "phone",
+    TELEGRAM_USER_ID: "telegram_user_id",
+    TELEGRAM_CHAT_ID: "telegram_chat_id",
+    STATUS: "status",
+    CREATED_AT: "created_at",
+    UPDATED_AT: "updated_at",
+    LINKED_AT: "linked_at",
+  }),
 
-    RECORDS_CACHE: Object.freeze({
-        ID: "id", // bigint, PK
-        COMPANY_ID: "company_id", // bigint, not null
-        RECORD_ID: "record_id", // bigint, not null
-        PAYLOAD_HASH: "payload_hash", // text, not null
+  RECORDS_CACHE: Object.freeze({
+    ID: "id",
+    COMPANY_ID: "company_id",
+    RECORD_ID: "record_id",
+    PAYLOAD_HASH: "payload_hash",
+    PAYLOAD: "payload",
+    YCLIENTS_CLIENT_ID: "yclients_client_id",
+    SERVICE_AT: "service_at",
+    ATTENDANCE: "attendance",
+    INTERNAL_STATUS: "internal_status",
+    DELETED: "deleted",
+    RECORD_CREATED_AT: "record_created_at",
+    CREATED_AT: "created_at",
+    UPDATED_AT: "updated_at",
+  }),
 
-        // добавили:
-        PAYLOAD: "payload", // jsonb/json, nullable
-        YCLIENTS_CLIENT_ID: "yclients_client_id", // bigint, nullable (client может быть null)
-        SERVICE_AT: "service_at", // timestamptz, nullable
-        ATTENDANCE: "attendance", // int, nullable
-        DELETED: "deleted", // boolean, nullable
-        RECORD_CREATED_AT: "record_created_at", // timestamptz, nullable
+  NOTIFICATION_JOBS: Object.freeze({
+    ID: "id",
+    COMPANY_ID: "company_id",
+    TELEGRAM_CHAT_ID: "telegram_chat_id",
+    TYPE: "type",
+    PAYLOAD: "payload",
+    STATUS: "status",
+    RUN_AT: "run_at",
+    DEDUPE_KEY: "dedupe_key",
+    ATTEMPTS: "attempts",
+    LAST_ERROR: "last_error",
+    CREATED_AT: "created_at",
+    UPDATED_AT: "updated_at",
+  }),
 
-        CREATED_AT: "created_at", // timestamptz/timestamp
-        UPDATED_AT: "updated_at", // timestamptz/timestamp
-    }),
+  USER_ACTIONS_LOG: Object.freeze({
+    ID: "id",
+    TELEGRAM_USER_ID: "telegram_user_id",
+    COMPANY_ID: "company_id",
+    ACTION: "action",
+    PAYLOAD: "payload",
+    CREATED_AT: "created_at",
+  }),
 
-    NOTIFICATION_JOBS: Object.freeze({
-        ID: "id", // bigint, PK
-        COMPANY_ID: "company_id", // bigint, not null
-
-        TELEGRAM_CHAT_ID: "telegram_chat_id", // bigint (nullable или not null — как в БД)
-        TYPE: "type", // text
-        PAYLOAD: "payload", // jsonb/json, nullable
-        STATUS: "status", // text: pending | running | done | failed | canceled ...
-        RUN_AT: "run_at", // timestamptz
-
-        // добавили:
-        DEDUPE_KEY: "dedupe_key", // text, nullable
-        ATTEMPTS: "attempts", // int, not null default 0
-        LAST_ERROR: "last_error", // text, nullable
-
-        CREATED_AT: "created_at", // timestamptz/timestamp
-        UPDATED_AT: "updated_at", // timestamptz/timestamp
-    }),
+  PROCESSED_ACTIONS: Object.freeze({
+    ID: "id",
+    COMPANY_ID: "company_id",
+    RECORD_ID: "record_id",
+    ACTION: "action",
+    CREATED_AT: "created_at",
+  }),
 });
