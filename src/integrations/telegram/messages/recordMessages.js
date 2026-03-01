@@ -63,23 +63,6 @@ function buildFooter({ recordLink, reviewLink } = {}) {
     return lines.join("\n");
 }
 
-
-const STATUS_TITLE = {
-    confirmed: "✅ Запись подтверждена",
-    cancelled: "❌ Запись отменена",
-    pending: "⏳ Запись ожидает подтверждения",
-};
-
-export function buildRecordCard({ status, date, service, branch }) {
-    return [
-        STATUS_TITLE[status] || STATUS_TITLE.pending,
-        "",
-        `📅 ${safe(date)}`,
-        `💼 ${safe(service)}`,
-        `📍 ${safe(branch, "Основной филиал")}`,
-    ].join("\n");
-}
-
 function buildBaseInfo(data) {
     const services = formatServices(data);
     const { date, time } = formatDateTime(data);

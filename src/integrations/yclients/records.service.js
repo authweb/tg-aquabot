@@ -113,30 +113,10 @@ export async function confirmRecordInYclients({ companyId, recordId }) {
     }
 
     const setVisit = String(process.env.YCLIENTS_CONFIRM_SET_VISIT_ATTENDANCE || "").trim() === "1";
-    const patch = setVisit ? { attendance: 1, visit_attendance: 1 } : { attendance: 1 };
+    const patch = setVisit ? { attendance: 2, visit_attendance: 2 } : { attendance: 2 };
 
     const payload = buildUpdatePayloadFromRecord({ rec, patch });
     const upd = await updateRecord({ companyId, recordId, payload });
 
-    return { ...upd, builtPayload: payload };
-}
-
-
-export async function cancelRecordInYclients({ companyId, recordId }) {
-    const check = await getRecordFromYclients({ companyId, recordId });
-    if (!check.ok) return check;
-
-    const rec = check.data || check.raw?.data;
-
-    if (Number(rec?.attendance) === 2 || rec?.deleted === true) {
-        return { ok: true, status: 200, raw: check.raw, alreadyCanceled: true };
-    }
-
-    const payload = buildUpdatePayloadFromRecord({
-        rec,
-        patch: { attendance: 2, visit_attendance: 2 },
-    });
-
-    const upd = await updateRecord({ companyId, recordId, payload });
     return { ...upd, builtPayload: payload };
 }

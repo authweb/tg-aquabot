@@ -6,8 +6,6 @@ import { notConfirmedRule } from "../../webhooks/rules/notConfirmedRule.js";
 import { recordCanceledRule } from "../../webhooks/rules/recordCanceledRule.js";
 import { noShowRule } from "../../webhooks/rules/noShowRule.js";
 import { handleRecordClientNotifications } from "../../webhooks/clientNotifications/recordClientNotify.js";
-import { upsertRecordCache } from "../../db/repos/recordsCache.repo.js";
-import { mapYclientsToInternal } from "../../domain/recordStatus.js";
 
 function buildRecordLink(body) {
     return (
@@ -57,23 +55,6 @@ export async function handleRecordEvent({ body, bot }) {
             hasData: Boolean(data),
         });
         return;
-    }
-
-
-    try {
-        await upsertRecordCache({
-            companyId: Number(company_id),
-            recordId: Number(resource_id),
-            payload: data,
-            yclientsClientId: data?.client?.id,
-            serviceAt: data?.datetime || data?.date,
-            attendance: data?.attendance,
-            internalStatus: mapYclientsToInternal({ attendance: data?.attendance, deleted: data?.deleted }),
-            deleted: data?.deleted,
-            recordCreatedAt: data?.create_date,
-        });
-    } catch (e) {
-        console.warn("[record] cache upsert failed", e?.message || e);
     }
 
     const phone = data?.client?.phone;

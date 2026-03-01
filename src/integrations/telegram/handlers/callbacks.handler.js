@@ -1,144 +1,114 @@
 // src/integrations/telegram/handlers/callbacks.handler.js
 import { BOT_TEXT } from "../messages/botMessages.js";
-import { buildRecordCard } from "../messages/recordMessages.js";
-import { confirmRecord, cancelRecord } from "../../../domain/records.service.js";
 
-const actionTTL = new Map();
-const ACTION_TTL_MS = 4000;
+import {
+    confirmRecordInYclients,
+    getRecordFromYclients,
+} from "../../yclients/records.service.js";
 
-function throttleKey({ userId, companyId, recordId, action }) {
-  return `${userId}:${companyId}:${recordId}:${action}`;
+function replyMd(ctx, text, extra = {}) {
+    return ctx.reply(text, { parse_mode: "Markdown", ...extra });
 }
 
-function isThrottled(key) {
-  const now = Date.now();
-  const prev = actionTTL.get(key);
-  if (prev && now - prev < ACTION_TTL_MS) return true;
-
-  actionTTL.set(key, now);
-
-  if (actionTTL.size > 5000) {
-    for (const [k, ts] of actionTTL.entries()) {
-      if (now - ts > ACTION_TTL_MS) actionTTL.delete(k);
-    }
-  }
-
-  return false;
-}
-
-function parseDateTime(dateTime) {
-  const raw = String(dateTime || "");
-  if (!raw) return "—";
-
-  if (raw.includes("T")) {
-    const [d, rest] = raw.split("T");
-    const t = (rest || "").split("+")[0].split("Z")[0].slice(0, 5);
-    return `${d} ${t}`.trim();
-  }
-
-  if (raw.includes(" ")) {
-    const [d, t] = raw.split(" ");
-    return `${d} ${(t || "").slice(0, 5)}`.trim();
-  }
-
-  return raw;
-}
-
-async function safeEditMessage(ctx, text) {
-  try {
-    await ctx.editMessageText(text, {
-      parse_mode: "Markdown",
-      disable_web_page_preview: true,
-      reply_markup: { inline_keyboard: [] },
-    });
-    return true;
-  } catch (e) {
-    console.log("[TG callback] editMessageText failed", e?.message || e);
-    return false;
-  }
-}
-
-function parseActionData(data) {
-  if (data.startsWith("rec_confirm:")) {
-    const [, companyIdRaw, recordIdRaw] = data.split(":");
-    return { action: "confirm", companyId: Number(companyIdRaw), recordId: Number(recordIdRaw) };
-  }
-
-  if (data.startsWith("rec_cancel:")) {
-    const [, companyIdRaw, recordIdRaw] = data.split(":");
-    return { action: "cancel", companyId: Number(companyIdRaw), recordId: Number(recordIdRaw) };
-  }
-
-  return null;
+function withTimeout(promise, ms) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout ${ms}ms`)), ms)),
+    ]);
 }
 
 export function registerCallbacks(bot) {
-  bot.on("callback_query:data", async (ctx) => {
-    const data = ctx.callbackQuery?.data || "";
-    const parsed = parseActionData(data);
-    if (!parsed) return;
+    bot.on("callback_query:data", async (ctx) => {
+        const data = ctx.callbackQuery?.data || "";
 
-    const tgUserId = ctx.from?.id;
-    if (!tgUserId) return;
+        console.log("[TG callback] IN", {
+            from: ctx.from?.id,
+            chat: ctx.chat?.id,
+            data,
+        });
 
-    const lockKey = throttleKey({
-      userId: tgUserId,
-      companyId: parsed.companyId,
-      recordId: parsed.recordId,
-      action: parsed.action,
+        await ctx.answerCallbackQuery().catch((e) => {
+            console.log("[TG callback] answerCallbackQuery failed", e?.message || e);
+        });
+
+        if (!data.startsWith("rec_confirm:")) return;
+
+        const [, companyIdRaw, recordIdRaw] = data.split(":");
+        const companyId = Number(companyIdRaw);
+        const recordId = Number(recordIdRaw);
+
+        const clearMarkup = async () => {
+            try {
+                await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+                console.log("[TG callback] markup cleared");
+            } catch (e) {
+                console.log("[TG callback] editMessageReplyMarkup failed", e?.message || e);
+            }
+        };
+
+        const safeReply = async (text) => replyMd(ctx, text).catch(() => { });
+        const safeAlert = async (text) =>
+            ctx.answerCallbackQuery({ text, show_alert: true }).catch(() => { });
+
+        try {
+            await safeReply(BOT_TEXT.cbChecking);
+
+            const check = await withTimeout(getRecordFromYclients({ companyId, recordId }), 8000);
+            if (!check.ok) {
+                await safeReply(BOT_TEXT.cbGetRecordFail);
+                return;
+            }
+
+            const rec = check.raw?.data || check.data;
+
+            console.log("[TG callback] record status before", {
+                record_id: rec?.id ?? recordId,
+                confirmed: rec?.confirmed,
+                attendance: rec?.attendance,
+                visit_attendance: rec?.visit_attendance,
+                datetime: rec?.datetime,
+                date: rec?.date,
+                staff_id: rec?.staff_id,
+                services_count: Array.isArray(rec?.services) ? rec.services.length : rec?.services_count,
+                client_id: rec?.client?.id,
+            });
+
+            // подтверждение клиента = attendance===2
+            if (Number(rec?.attendance) === 2) {
+                await clearMarkup();
+                await safeReply(BOT_TEXT.cbAlreadyConfirmed);
+                return;
+            }
+
+            await safeReply(BOT_TEXT.cbConfirming);
+
+            const upd = await withTimeout(confirmRecordInYclients({ companyId, recordId }), 8000);
+
+            console.log("[TG callback] update meta:", JSON.stringify(upd?.raw?.meta, null, 2));
+            console.log("[TG callback] update errors:", JSON.stringify(upd?.raw?.meta?.errors, null, 2));
+            if (upd?.builtPayload) {
+                console.log("[TG callback] confirm builtPayload:", JSON.stringify(upd.builtPayload, null, 2));
+            }
+
+            if (!upd?.ok) {
+                await clearMarkup();
+                await safeAlert(BOT_TEXT.cbUpdateFailAlert);
+                await safeReply(BOT_TEXT.cbUpdateFailMsg);
+                return;
+            }
+
+            await clearMarkup();
+            await ctx.answerCallbackQuery({ text: "✅ Подтверждено" }).catch(() => { });
+            await safeReply(BOT_TEXT.cbOk);
+            console.log("[TG callback] done OK");
+        } catch (e) {
+            console.log("[TG callback] ERROR", e?.message || e);
+
+            const msg = String(e?.message || e).includes("Timeout")
+                ? BOT_TEXT.cbTimeout
+                : `🚨 Ошибка подтверждения: ${e?.message || e}`;
+
+            await safeReply(msg);
+        }
     });
-
-    if (isThrottled(lockKey)) {
-      await ctx.answerCallbackQuery({ text: "⏳ Подождите пару секунд" }).catch(() => { });
-      return;
-    }
-
-    await ctx.answerCallbackQuery().catch(() => { });
-
-    try {
-      let result;
-      if (parsed.action === "confirm") {
-        result = await confirmRecord({
-          companyId: parsed.companyId,
-          recordId: parsed.recordId,
-          telegramUserId: tgUserId,
-        });
-      } else {
-        result = await cancelRecord({
-          companyId: parsed.companyId,
-          recordId: parsed.recordId,
-          telegramUserId: tgUserId,
-        });
-      }
-
-      if (!result?.ok) {
-        const msg =
-          result?.reason === "not_linked"
-            ? BOT_TEXT.needPhoneForRecord
-            : result?.reason === "forbidden"
-              ? "⚠️ Эта запись принадлежит другому клиенту."
-              : "⚠️ Не удалось обновить запись. Попробуйте позже.";
-
-        await safeEditMessage(ctx, msg);
-        return;
-      }
-
-      const rec = result?.record;
-      const text = buildRecordCard({
-        status: parsed.action === "confirm" ? "confirmed" : "cancelled",
-        date: parseDateTime(rec?.dateTime),
-        service: rec?.service,
-        branch: rec?.branch,
-      });
-
-      await safeEditMessage(ctx, text);
-
-      await ctx.answerCallbackQuery({
-        text: parsed.action === "confirm" ? "✅ Запись подтверждена" : "❌ Запись отменена",
-      }).catch(() => { });
-    } catch (e) {
-      console.log("[TG callback] ERROR", e?.message || e);
-      await safeEditMessage(ctx, BOT_TEXT.cbTimeout);
-    }
-  });
 }
